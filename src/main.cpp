@@ -1,6 +1,13 @@
 #include "raylib.h"
 #include "Math.h"
 
+
+//add sound
+//add images
+
+//add game states
+
+
 constexpr float SCREEN_WIDTH = 1200.0f;
 constexpr float SCREEN_HEIGHT = 800.0f;
 constexpr Vector2 CENTER{ SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.5f };
@@ -13,6 +20,9 @@ constexpr float BALL_SIZE = 40.0f;
 constexpr float PADDLE_SPEED = SCREEN_HEIGHT * 0.5f;
 constexpr float PADDLE_WIDTH = 40.0f;
 constexpr float PADDLE_HEIGHT = 80.0f;
+
+int redPoints = 0;
+int bluePoints = 0;
 
 struct Box
 {
@@ -79,8 +89,19 @@ void DrawPaddle(Vector2 position, Color color)
     DrawRectangleRec(BoxToRec(paddleBox), color);
 }
 
+void DrawScore(Color color)
+{
+    const char* scoreText = TextFormat("%i/%i", redPoints, bluePoints);
+
+    // We can measure our text for more exact positioning. This puts our score in the center of our screen!
+    DrawText(scoreText, SCREEN_WIDTH * 0.5f - MeasureText(scoreText, 120) * 0.5f, 50, 120, color);
+}
+
+
+
 int main()
 {
+    float hue = 0;
     Vector2 ballPosition;
     Vector2 ballDirection;
     ResetBall(ballPosition, ballDirection);
@@ -106,8 +127,11 @@ int main()
         if (IsKeyDown(KEY_S))
             paddle1Position.y += paddleDelta;
 
-        // Mirror paddle 1 for now
-        paddle2Position.y = paddle1Position.y;
+        if (IsKeyDown(KEY_UP))
+            paddle2Position.y -= paddleDelta;
+        if (IsKeyDown(KEY_DOWN))
+            paddle2Position.y += paddleDelta;
+        
 
         float phh = PADDLE_HEIGHT * 0.5f;
         paddle1Position.y = Clamp(paddle1Position.y, phh, SCREEN_HEIGHT - phh);
@@ -119,20 +143,33 @@ int main()
         Box paddle1Box = PaddleBox(paddle1Position);
         Box paddle2Box = PaddleBox(paddle2Position);
 
-        // TODO -- increment the scoring player's score after they've touched the ball and the ball goes too far right/left
-        testScore++;
-        if (ballBox.xMin < 0.0f || ballBox.xMax > SCREEN_WIDTH)
+        if (ballBox.xMin < 0.0f)
         {
-            ballDirection.x *= -1.0f;
+            redPoints++;
+            ResetBall(ballPosition, ballDirection);
         }
+        else if (ballBox.xMax > SCREEN_WIDTH)
+        {
+            bluePoints++;
+            ResetBall(ballPosition, ballDirection);
+        }
+
         if (ballBox.yMin < 0.0f || ballBox.yMax > SCREEN_HEIGHT)
         {
             ballDirection.y *= -1.0f;
-        }
         if (BoxOverlap(ballBox, paddle1Box) || BoxOverlap(ballBox, paddle2Box))
         {
             ballDirection.x *= -1.0f;
         }
+
+        
+        hue++;
+        if (hue > 360)
+            hue -= 360;
+        else
+            hue++;
+
+        Color rainbow = ColorFromHSV(hue, 1, 1);
 
         // Update ball position after collision resolution, then render
         ballPosition = ballPosition + ballDirection * ballDelta;
@@ -142,12 +179,7 @@ int main()
         DrawBall(ballPosition, WHITE);
         DrawPaddle(paddle1Position, WHITE);
         DrawPaddle(paddle2Position, WHITE);
-
-        // Text format requires you to put a '%i' wherever you want an integer, then add said integer after the comma
-        const char* testScoreText = TextFormat("Test Score: %i ", testScore);
-        
-        // We can measure our text for more exact positioning. This puts our score in the center of our screen!
-        DrawText(testScoreText, SCREEN_WIDTH * 0.5f - MeasureText(testScoreText, 20) * 0.5f, 50, 20, BLUE);
+        DrawScore(rainbow);
         EndDrawing();
     }
 
